@@ -41,7 +41,7 @@ export function getIntegrationStatus(env) {
   };
 }
 
-export async function publishThreadsText(env, text) {
+export async function publishThreadsText(env, input) {
   if (!env.THREADS_ACCESS_TOKEN || !env.THREADS_USER_ID) {
     throw new Error(
       "Threads 발행에 필요한 환경 변수가 없습니다. THREADS_ACCESS_TOKEN과 THREADS_USER_ID를 설정해 주세요.",
@@ -50,9 +50,17 @@ export async function publishThreadsText(env, text) {
 
   const createPayload = new URLSearchParams({
     media_type: "TEXT",
-    text,
+    text: input.text,
     access_token: env.THREADS_ACCESS_TOKEN,
   });
+
+  if (input.replyToId) {
+    createPayload.set("reply_to_id", input.replyToId);
+  }
+
+  if (input.replyControl) {
+    createPayload.set("reply_control", input.replyControl);
+  }
 
   const createResponse = await fetch(
     `${THREADS_GRAPH_URL}/${env.THREADS_USER_ID}/threads`,
@@ -152,6 +160,8 @@ export async function publishInstagramMedia(env, input) {
     throw new Error("Instagram media container ID를 받지 못했습니다.");
   }
 
+  await waitForInstagramMediaReady(env, creationId);
+
   const publishPayload = new URLSearchParams({
     creation_id: creationId,
     access_token: env.INSTAGRAM_ACCESS_TOKEN,
@@ -179,6 +189,49 @@ export async function publishInstagramMedia(env, input) {
     publishId: publishResult?.id || "",
     raw: publishResult,
   };
+}
+
+async function waitForInstagramMediaReady(env, creationId) {
+  const maxAttempts = 12;
+  const delayMs = 2000;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const statusUrl = new URL(`${INSTAGRAM_GRAPH_URL}/${creationId}`);
+    statusUrl.searchParams.set("fields", "status_code,status");
+    statusUrl.searchParams.set("access_token", env.INSTAGRAM_ACCESS_TOKEN);
+
+    const statusResponse = await fetch(statusUrl);
+    const statusResult = await statusResponse.json();
+
+    if (!statusResponse.ok) {
+      throw new Error(
+        formatProviderError("Instagram media 상태 조회 실패", statusResult),
+      );
+    }
+
+    const statusCode =
+      typeof statusResult?.status_code === "string"
+        ? statusResult.status_code.toUpperCase()
+        : "";
+
+    if (!statusCode || statusCode === "FINISHED" || statusCode === "PUBLISHED") {
+      return;
+    }
+
+    if (statusCode === "ERROR" || statusCode === "EXPIRED") {
+      throw new Error(
+        `Instagram media 준비 실패: ${statusCode}${statusResult?.status ? ` (${statusResult.status})` : ""}`,
+      );
+    }
+
+    await sleep(delayMs);
+  }
+
+  throw new Error("Instagram media 준비 대기 시간이 초과되었습니다.");
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function formatProviderError(prefix, payload) {

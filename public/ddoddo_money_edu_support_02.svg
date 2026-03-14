@@ -1,0 +1,36 @@
+<svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="g1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(860 160) rotate(140) scale(640 540)">
+      <stop stop-color="#D8E3D0"/>
+      <stop offset="1" stop-color="#F7F5EF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(180 930) rotate(20) scale(540 460)">
+      <stop stop-color="#EEE3D1"/>
+      <stop offset="1" stop-color="#F7F5EF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="grain2" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.05"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="1080" height="1080" fill="#F7F5EF"/>
+  <rect width="1080" height="1080" fill="url(#g1)"/>
+  <rect width="1080" height="1080" fill="url(#g2)"/>
+  <rect width="1080" height="1080" filter="url(#grain2)" opacity="0.3"/>
+
+  <text x="540" y="170" text-anchor="middle" fill="#6A6760" font-size="34" font-family="Apple SD Gothic Neo, Pretendard, sans-serif" letter-spacing="3">ddoddo_money</text>
+
+  <text x="540" y="320" text-anchor="middle" fill="#1F2933" font-size="72" font-weight="700" font-family="Apple SD Gothic Neo, Pretendard, serif">학원장이 먼저 볼 건</text>
+  <text x="540" y="415" text-anchor="middle" fill="#1F2933" font-size="94" font-weight="700" font-family="Apple SD Gothic Neo, Pretendard, serif">딱 3가지입니다</text>
+
+  <line x1="235" y1="525" x2="845" y2="525" stroke="#D0D5CB" stroke-width="2"/>
+
+  <text x="540" y="635" text-anchor="middle" fill="#3F4854" font-size="52" font-weight="600" font-family="Apple SD Gothic Neo, Pretendard, sans-serif">전자칠판</text>
+  <text x="540" y="720" text-anchor="middle" fill="#3F4854" font-size="52" font-weight="600" font-family="Apple SD Gothic Neo, Pretendard, sans-serif">사이니지</text>
+  <text x="540" y="805" text-anchor="middle" fill="#3F4854" font-size="52" font-weight="600" font-family="Apple SD Gothic Neo, Pretendard, sans-serif">운영 소프트웨어</text>
+
+  <text x="540" y="930" text-anchor="middle" fill="#777169" font-size="30" font-family="Apple SD Gothic Neo, Pretendard, sans-serif" letter-spacing="2">필요성보다 먼저 지원 가능 여부</text>
+</svg>
