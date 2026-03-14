@@ -1,0 +1,49 @@
+<svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgTop" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(880 120) rotate(140) scale(620 540)">
+      <stop stop-color="#F8D7B5"/>
+      <stop offset="1" stop-color="#FAF5EE" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bgBottom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(180 940) rotate(20) scale(580 500)">
+      <stop stop-color="#F2DFC8"/>
+      <stop offset="1" stop-color="#FBF7F1" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="grain" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.06" />
+      </feComponentTransfer>
+    </filter>
+  </defs>
+
+  <rect width="1080" height="1080" fill="#FBF7F1"/>
+  <rect width="1080" height="1080" fill="url(#bgTop)"/>
+  <rect width="1080" height="1080" fill="url(#bgBottom)"/>
+  <rect width="1080" height="1080" filter="url(#grain)" opacity="0.3"/>
+
+  <text x="540" y="180" text-anchor="middle" fill="#66605A" font-size="34" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif" letter-spacing="3">
+    ddoddo_money
+  </text>
+
+  <text x="540" y="350" text-anchor="middle" fill="#222934" font-size="78" font-weight="700" font-family="Apple SD Gothic Neo, Pretendard, Noto Serif KR, serif">
+    돈 아끼는 선택에는
+  </text>
+  <text x="540" y="445" text-anchor="middle" fill="#222934" font-size="92" font-weight="700" font-family="Apple SD Gothic Neo, Pretendard, Noto Serif KR, serif">
+    기준이 필요합니다
+  </text>
+
+  <line x1="240" y1="560" x2="840" y2="560" stroke="#D5CCC0" stroke-width="2"/>
+
+  <text x="540" y="655" text-anchor="middle" fill="#5F6876" font-size="42" font-weight="500" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
+    가격만 보지 않습니다
+  </text>
+
+  <text x="540" y="748" text-anchor="middle" fill="#3D4552" font-size="48" font-weight="600" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif">
+    실사용성 · 재구매 가능성 · 시간 절약 효과
+  </text>
+
+  <text x="540" y="920" text-anchor="middle" fill="#7B756F" font-size="30" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, sans-serif" letter-spacing="2">
+    절약템 · 자동화 · 수익화 실험
+  </text>
+</svg>
