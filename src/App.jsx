@@ -43,6 +43,8 @@ const INITIAL_FORM = {
   offerLink: PARTNER_LINK,
   tone: "전문적이지만 친근한 톤",
   objective: "문의 전환",
+  offerProvider: "coupang",
+  offerCategoryName: "교육",
   instagramMediaUrl: "",
   instagramMediaType: "IMAGE",
   youtubeVideoUrl: "",
@@ -134,9 +136,15 @@ export default function App() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [campaign, setCampaign] = useState(createInitialCampaign);
   const [integrations, setIntegrations] = useState(EMPTY_INTEGRATIONS);
+  const [offersState, setOffersState] = useState({
+    items: [],
+    warnings: [],
+    selectedId: "",
+  });
   const [activeChannel, setActiveChannel] = useState("blog");
   const [error, setError] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDiscoveringOffers, setIsDiscoveringOffers] = useState(false);
   const [copyState, setCopyState] = useState("idle");
   const [operationState, setOperationState] = useState({
     status: "idle",
@@ -150,6 +158,11 @@ export default function App() {
 
   const activeOutput = campaign[activeChannel];
   const activeChannelMeta = CHANNELS.find((channel) => channel.id === activeChannel);
+  const selectedOffer = useMemo(
+    () =>
+      offersState.items.find((offer) => offer.id === offersState.selectedId) || null,
+    [offersState.items, offersState.selectedId],
+  );
 
   const isReadyToSubmit = useMemo(
     () =>
@@ -179,9 +192,15 @@ export default function App() {
   async function handleGenerate(event) {
     event.preventDefault();
 
+    await requestCampaignGeneration(selectedOffer);
+  }
+
+  async function requestCampaignGeneration(offerOverride = null) {
+    const activeOffer = offerOverride || selectedOffer;
+
     if (!isReadyToSubmit) {
       setError("타겟 고객, 메인 키워드, 상품/서비스명을 모두 입력해 주세요.");
-      return;
+      return false;
     }
 
     setError("");
@@ -190,7 +209,10 @@ export default function App() {
     setOperationState({ status: "idle", title: "", message: "" });
 
     try {
-      const response = await fetch("/api/generate-campaign", {
+      const endpoint = activeOffer
+        ? "/api/generate-offer-campaign"
+        : "/api/generate-campaign";
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -202,6 +224,18 @@ export default function App() {
           offerLink: form.offerLink.trim(),
           tone: form.tone.trim(),
           objective: form.objective.trim(),
+          ...(activeOffer
+            ? {
+                offer: {
+                  provider: activeOffer.provider,
+                  title: activeOffer.title,
+                  summary: activeOffer.summary,
+                  category: activeOffer.category,
+                  link: activeOffer.link,
+                  imageUrl: activeOffer.imageUrl,
+                },
+              }
+            : {}),
         }),
       });
 
@@ -214,15 +248,125 @@ export default function App() {
       setCampaign(data.campaign);
       setActiveChannel("blog");
       setVideoPackage(null);
+      setOperationState({
+        status: "success",
+        title: "캠페인 생성 완료",
+        message: activeOffer
+          ? `${activeOffer.provider} 오퍼 기준으로 블로그, Instagram, Threads, YouTube, Shorts 초안을 생성했습니다.`
+          : "브리프 기준으로 멀티채널 초안을 생성했습니다.",
+      });
+      return true;
     } catch (requestError) {
       setError(
         requestError instanceof Error
           ? requestError.message
           : "알 수 없는 오류가 발생했습니다.",
       );
+      return false;
     } finally {
       setIsGenerating(false);
     }
+  }
+
+  async function handleDiscoverOffers(options = {}) {
+    const searchKeyword = form.keyword.trim() || form.productName.trim();
+    const shouldAutoGenerate = options.autoGenerate === true;
+
+    if (searchKeyword.length < 2) {
+      setError("오퍼 검색을 위해 메인 키워드 또는 상품/서비스명을 2자 이상 입력해 주세요.");
+      return null;
+    }
+
+    setError("");
+    setIsDiscoveringOffers(true);
+    setOperationState({
+      status: "working",
+      title: "오퍼 검색",
+      message: `${form.offerProvider === "tenping" ? "텐핑" : "쿠팡"} 오퍼를 조회하고 있습니다.`,
+    });
+
+    try {
+      const response = await fetch("/api/discover-offers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          provider: form.offerProvider,
+          keyword: searchKeyword,
+          categoryName: form.offerCategoryName.trim(),
+          limit: 6,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "오퍼 검색에 실패했습니다.");
+      }
+
+      const nextOffers = Array.isArray(data?.offers) ? data.offers : [];
+      const nextSelectedId = nextOffers[0]?.id || "";
+
+      setOffersState({
+        items: nextOffers,
+        warnings: Array.isArray(data?.warnings) ? data.warnings : [],
+        selectedId: nextSelectedId,
+      });
+
+      if (nextOffers[0]) {
+        applySelectedOffer(nextOffers[0]);
+      }
+
+      setOperationState({
+        status: "success",
+        title: "오퍼 검색 완료",
+        message:
+          nextOffers.length > 0
+            ? `${nextOffers.length}개의 오퍼를 찾았습니다.`
+            : "조건에 맞는 오퍼를 찾지 못했습니다.",
+      });
+
+      if (shouldAutoGenerate && nextOffers[0]) {
+        setActiveChannel("instagram");
+        await requestCampaignGeneration(nextOffers[0]);
+      }
+
+      return nextOffers;
+    } catch (offerError) {
+      setOperationState({
+        status: "error",
+        title: "오퍼 검색 실패",
+        message:
+          offerError instanceof Error
+            ? offerError.message
+            : "오퍼 검색 중 오류가 발생했습니다.",
+      });
+      return null;
+    } finally {
+      setIsDiscoveringOffers(false);
+      loadIntegrationStatus();
+    }
+  }
+
+  async function handleAutoOfferGenerate() {
+    await handleDiscoverOffers({ autoGenerate: true });
+  }
+
+  function handleSelectOffer(offer) {
+    setOffersState((current) => ({
+      ...current,
+      selectedId: offer.id,
+    }));
+    applySelectedOffer(offer);
+  }
+
+  function applySelectedOffer(offer) {
+    setForm((current) => ({
+      ...current,
+      productName: offer.title || current.productName,
+      offerLink: offer.link || current.offerLink,
+    }));
   }
 
   async function handleCopy() {
@@ -612,6 +756,123 @@ export default function App() {
                 />
               </label>
 
+              <section className="offer-panel">
+                <div className="offer-panel-head">
+                  <div>
+                    <p className="panel-kicker">Offer Discovery</p>
+                    <h3 className="offer-panel-title">쿠팡/텐핑 오퍼 선택</h3>
+                    <p className="offer-panel-copy">
+                      키워드로 오퍼를 먼저 찾고 선택하면, 선택한 오퍼 기준으로
+                      멀티채널 캠페인을 생성할 수 있습니다.
+                    </p>
+                  </div>
+                  <button
+                    className="button button-secondary"
+                    type="button"
+                    disabled={isDiscoveringOffers}
+                    onClick={handleDiscoverOffers}
+                  >
+                    {isDiscoveringOffers ? "오퍼 검색 중..." : "오퍼 검색"}
+                  </button>
+                </div>
+
+                <div className="action-row action-row-compact">
+                  <button
+                    className="button button-primary button-inline"
+                    type="button"
+                    disabled={isDiscoveringOffers || isGenerating}
+                    onClick={handleAutoOfferGenerate}
+                  >
+                    {isDiscoveringOffers || isGenerating
+                      ? "추천 오퍼 데모 생성 중..."
+                      : "추천 오퍼 검색 후 자동 생성"}
+                  </button>
+                </div>
+
+                <div className="input-grid">
+                  <label className="field">
+                    <span className="field-label">오퍼 공급처</span>
+                    <span className="field-hint">현재는 쿠팡, 텐핑 검색을 지원합니다.</span>
+                    <select
+                      className="input select-input"
+                      name="offerProvider"
+                      value={form.offerProvider}
+                      onChange={handleChange}
+                    >
+                      <option value="coupang">coupang</option>
+                      <option value="tenping">tenping</option>
+                    </select>
+                  </label>
+
+                  <label className="field">
+                    <span className="field-label">오퍼 카테고리</span>
+                    <span className="field-hint">텐핑 검색 시 카테고리 힌트로 사용합니다.</span>
+                    <input
+                      className="input"
+                      name="offerCategoryName"
+                      type="text"
+                      placeholder="예: 교육, 리빙, IT"
+                      value={form.offerCategoryName}
+                      onChange={handleChange}
+                    />
+                  </label>
+                </div>
+
+                {offersState.warnings.length > 0 ? (
+                  <div className="offer-warning-list">
+                    {offersState.warnings.map((warning, index) => (
+                      <p className="offer-warning" key={`${warning}-${index}`}>
+                        {warning}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+
+                {selectedOffer ? (
+                  <article className="offer-selected">
+                    <p className="meta-label">선택된 오퍼</p>
+                    <strong>{selectedOffer.title}</strong>
+                    <p>{selectedOffer.summary || "요약 정보가 없습니다."}</p>
+                    <p className="token-list">
+                      {selectedOffer.provider} · {selectedOffer.category || "카테고리 없음"}
+                    </p>
+                  </article>
+                ) : null}
+
+                {offersState.items.length > 0 ? (
+                  <div className="offer-grid">
+                    {offersState.items.map((offer) => (
+                      <article
+                        className="offer-card"
+                        key={offer.id}
+                        data-selected={String(offer.id === offersState.selectedId)}
+                      >
+                        <div className="offer-card-top">
+                          <strong>{offer.title}</strong>
+                          <span className="status-badge" data-ready="true">
+                            {offer.provider}
+                          </span>
+                        </div>
+                        <p>{offer.summary || "요약 정보가 없습니다."}</p>
+                        <p className="token-list">
+                          {offer.category || "카테고리 없음"}
+                          {typeof offer.price === "number"
+                            ? ` · ${offer.price.toLocaleString("ko-KR")}원`
+                            : ""}
+                        </p>
+                        <button
+                          className="button button-secondary offer-select-button"
+                          type="button"
+                          onClick={() => handleSelectOffer(offer)}
+                        >
+                          {offer.id === offersState.selectedId ? "선택됨" : "이 오퍼 사용"}
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+
               <label className="field">
                 <span className="field-label">톤앤매너</span>
                 <span className="field-hint">예: 전문적이지만 친근한 톤, 공격적 세일즈 금지</span>
@@ -694,7 +955,9 @@ export default function App() {
                 >
                   {isGenerating
                     ? "멀티채널 캠페인 생성 중..."
-                    : "멀티채널 마케팅 패키지 생성"}
+                    : selectedOffer
+                      ? "선택한 오퍼로 마케팅 패키지 생성"
+                      : "멀티채널 마케팅 패키지 생성"}
                 </button>
               </div>
             </form>

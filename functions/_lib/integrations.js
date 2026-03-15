@@ -1,3 +1,5 @@
+import { getOfferIntegrationStatus } from "./offers.js";
+
 const INSTAGRAM_GRAPH_URL = "https://graph.instagram.com/v25.0";
 const THREADS_GRAPH_URL = "https://graph.threads.net/v1.0";
 
@@ -38,6 +40,7 @@ export function getIntegrationStatus(env) {
           ? "OAuth 업로드 준비됨"
           : "YOUTUBE_CLIENT_ID / SECRET / REFRESH_TOKEN 필요",
     },
+    ...getOfferIntegrationStatus(env),
   };
 }
 
